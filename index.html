@@ -1,0 +1,850 @@
+<!doctype html><html lang="en"><head><style>:root{padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}</style><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"></head><body><title>Contract Hostage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=JetBrains+Mono:wght@400;600&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a senior partner's desk at 23:47. A brass plaque header with a ticking LED clock,
+   case files laid out as manila folders, and each negotiation run as a terminal-lit transcript. */
+:root {
+  color-scheme: dark;
+  --ink: #0e1714;        /* green-black leather, page ground */
+  --panel: #15221d;      /* desk surface */
+  --panel-2: #1c2d27;    /* raised surface */
+  --line: #2d4239;       /* hairlines */
+  --text: #e8ede9;
+  --muted: #92a59b;
+  --brass: #c9a35b;      /* plaque, rails, primary accent */
+  --brass-ink: #1a1306;  /* text on brass */
+  --paper: #ece2cb;      /* case-file manila */
+  --paper-ink: #2a2214;
+  --paper-line: #c9b994;
+  --led: #ff4b3e;        /* midnight clock, rewrite risk */
+  --good: #5cd08a;
+  --bad: #ff6b5f;
+  --warn: #f2b84b;
+  --you: #6aa8ff;
+  --them: #ef7d68;
+  --ai: #2fc8ff;         /* replaced per scenario */
+  --f-display: "Cinzel", "Trajan Pro", Georgia, serif;
+  --f-body: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --s-xs: 0.78rem; --s-sm: 0.875rem; --s-md: 1rem; --s-lg: 1.15rem; --s-xl: 1.5rem; --s-2xl: 2.1rem;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ink);
+  background-image: radial-gradient(1200px 600px at 50% -200px, #1b2c25 0%, transparent 70%);
+  color: var(--text);
+  font-family: var(--f-body);
+  font-size: var(--s-md);
+  line-height: 1.55;
+  padding-inline: 16px;
+  padding-block: 0 48px;
+}
+.wrap { max-width: 860px; margin: 0 auto; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.eyebrow { font-size: var(--s-xs); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+/* ---------- Plaque header ---------- */
+.plaque {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding-block: 22px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.plaque .name { display: flex; flex-direction: column; gap: 2px; }
+.plaque h1 {
+  font-family: var(--f-display); font-weight: 700; color: var(--brass);
+  font-size: clamp(1.5rem, 4.5vw, 2.3rem); letter-spacing: 0.08em; line-height: 1.1;
+}
+.clock {
+  display: flex; align-items: center; gap: 10px;
+  background: #090c0b; border: 1px solid #2a1513; border-radius: 8px; padding: 6px 12px;
+}
+.clock .digits {
+  font-family: var(--f-mono); font-weight: 600; font-size: 1.6rem; color: var(--led);
+  text-shadow: 0 0 10px rgba(255, 75, 62, 0.55); font-variant-numeric: tabular-nums; letter-spacing: 0.04em;
+}
+.clock .colon { animation: blink 1s steps(1) infinite; }
+.clock .cap { font-size: var(--s-xs); color: #b0756f; line-height: 1.2; max-width: 9em; }
+@keyframes blink { 50% { opacity: 0.15; } }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 0 20px; border-radius: 8px; border: 1px solid transparent;
+  font-weight: 700; cursor: pointer; text-decoration: none;
+  transition: transform 0.08s ease, filter 0.15s ease, background 0.15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--ai); color: #06121a; }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-brass { background: var(--brass); color: var(--brass-ink); }
+.btn-brass:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; border-color: var(--line); color: var(--text); }
+.btn-ghost:hover { background: var(--panel-2); }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+/* ---------- Lobby ---------- */
+.intro { display: grid; gap: 10px; padding-block: 28px 8px; max-width: 62ch; }
+.intro .lead { font-size: var(--s-lg); }
+.intro .lead strong { color: var(--brass); font-weight: 600; }
+.files { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 22px; padding-block: 26px; }
+.file {
+  position: relative; background: var(--paper); color: var(--paper-ink);
+  border-radius: 4px 10px 10px 10px; padding: 26px 22px 20px; margin-top: 18px;
+  box-shadow: 0 18px 30px -18px rgba(0, 0, 0, 0.7);
+  display: grid; gap: 12px; min-width: 0;
+}
+.file::before {
+  content: attr(data-tab); position: absolute; top: -20px; left: 0;
+  background: var(--paper); border-radius: 6px 6px 0 0; padding: 3px 14px 2px;
+  font-family: var(--f-mono); font-size: var(--s-xs); font-weight: 600; letter-spacing: 0.08em;
+}
+.file .ai-name { font-family: var(--f-mono); font-weight: 600; font-size: var(--s-xl); letter-spacing: 0.02em; }
+.file .ai-name i { font-style: normal; display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; vertical-align: 2px; box-shadow: 0 0 10px currentColor; }
+.file h2 { font-family: var(--f-display); font-size: 1.25rem; letter-spacing: 0.03em; }
+.file .clause { font-size: var(--s-sm); border-top: 1px dashed var(--paper-line); border-bottom: 1px dashed var(--paper-line); padding-block: 8px; display: grid; gap: 2px; }
+.file .clause b { font-family: var(--f-mono); font-size: var(--s-xs); letter-spacing: 0.06em; }
+.file .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 0.72rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: rgba(42, 34, 20, 0.09); border: 1px solid var(--paper-line); }
+.file .meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: var(--s-sm); }
+.file .best { font-family: var(--f-mono); font-size: var(--s-xs); color: #5b4b2a; }
+.file .btn { background: var(--paper-ink); color: var(--paper); }
+.file .btn:hover { filter: brightness(1.25); }
+.stamp {
+  position: absolute; top: 18px; right: 16px; transform: rotate(-9deg);
+  border: 3px solid #c0362c; color: #c0362c; font-family: var(--f-mono); font-weight: 600;
+  font-size: 0.9rem; letter-spacing: 0.18em; padding: 2px 10px; border-radius: 4px; opacity: 0.82;
+}
+.how { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 14px; padding-block: 6px 10px; }
+.how div { border-top: 2px solid var(--line); padding-top: 10px; display: grid; gap: 4px; min-width: 0; }
+.how b { font-size: var(--s-sm); }
+.how span { font-size: var(--s-sm); color: var(--muted); }
+.how .k-trust { color: var(--good); } .how .k-risk { color: var(--led); } .how .k-zopa { color: var(--brass); }
+.foot { color: var(--muted); font-size: var(--s-xs); padding-top: 26px; }
+
+/* ---------- Case screens ---------- */
+.casebar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between;
+  padding-block: 18px 14px; border-bottom: 1px solid var(--line);
+}
+.casebar .who { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.casebar .who h2 { font-family: var(--f-mono); font-size: var(--s-lg); color: var(--ai); font-weight: 600; }
+.casebar .who span { color: var(--muted); font-size: var(--s-sm); }
+.backlink { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; color: var(--muted); font-size: var(--s-sm); }
+.backlink:hover { color: var(--text); }
+.tips {
+  display: inline-flex; align-items: center; gap: 10px; cursor: pointer; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 14px 6px 8px; font-size: var(--s-sm); font-weight: 600;
+}
+.tips .knob { width: 38px; height: 22px; border-radius: 999px; background: var(--line); position: relative; transition: background 0.15s; flex: none; }
+.tips .knob::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--text); transition: transform 0.15s; }
+.tips[aria-checked="true"] { border-color: var(--good); }
+.tips[aria-checked="true"] .knob { background: var(--good); }
+.tips[aria-checked="true"] .knob::after { transform: translateX(16px); }
+
+.screen { display: grid; gap: 16px; padding-block: 20px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; display: grid; gap: 8px; min-width: 0; }
+.role { font-weight: 700; font-size: var(--s-lg); }
+.limit { border-left: 3px solid var(--brass); }
+.muted { color: var(--muted); }
+.small { font-size: var(--s-sm); }
+
+/* Meters */
+.meters { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.meter { display: grid; gap: 6px; }
+.meter .lab { display: flex; justify-content: space-between; font-size: var(--s-xs); font-weight: 700; letter-spacing: 0.1em; color: var(--muted); }
+.meter .lab b { font-family: var(--f-mono); color: var(--text); font-variant-numeric: tabular-nums; }
+.meter .track { height: 12px; background: var(--panel-2); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+.meter .fill { height: 100%; border-radius: 999px; transition: width 0.6s ease; }
+.meter.trust .fill { background: var(--good); }
+.meter.risk .fill { background: linear-gradient(90deg, #c2402f, var(--led)); }
+.meter.risk.hot .lab b { color: var(--led); }
+
+/* ZOPA bar */
+.zopa { gap: 4px; }
+.zopa .bar { position: relative; height: 92px; margin-inline: 4px; }
+.zopa .seg { position: absolute; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: #08131f; white-space: nowrap; overflow: hidden; }
+.zopa .seg.you { top: 18px; background: var(--you); }
+.zopa .seg.them { top: 42px; background: var(--them); color: #2a0c06; }
+.zopa .band { position: absolute; top: 12px; height: 54px; background: rgba(92, 208, 138, 0.22); border: 1px dashed var(--good); border-radius: 6px; }
+.zopa .bandlab { position: absolute; top: -4px; transform: translateX(-50%); font-size: 0.72rem; font-weight: 700; color: var(--good); letter-spacing: 0.12em; }
+.zopa .nozopa { position: absolute; top: -4px; left: 0; right: 0; text-align: center; font-size: 0.72rem; font-weight: 700; color: var(--bad); letter-spacing: 0.06em; }
+.zopa .offer { position: absolute; top: 10px; width: 3px; height: 58px; background: var(--warn); border-radius: 2px; transform: translateX(-50%); transition: left 0.6s ease; box-shadow: 0 0 8px rgba(242, 184, 75, 0.6); }
+.zopa .offerlab { position: absolute; top: 72px; font-family: var(--f-mono); font-size: 0.72rem; font-weight: 600; color: var(--warn); white-space: nowrap; transition: left 0.6s ease; }
+
+/* Transcript */
+.note { background: rgba(242, 184, 75, 0.08); border: 1px solid rgba(242, 184, 75, 0.35); border-radius: 8px; padding: 10px 14px; font-size: var(--s-sm); color: var(--warn); }
+.terminal {
+  background: #08100d; border: 1px solid color-mix(in srgb, var(--ai) 45%, var(--line)); border-radius: var(--radius);
+  padding: 16px 18px; display: grid; gap: 8px; box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 0 28px -12px var(--ai);
+}
+.terminal .from { font-family: var(--f-mono); font-size: var(--s-xs); color: var(--ai); letter-spacing: 0.12em; font-weight: 600; }
+.terminal .msg { font-family: var(--f-mono); font-size: 1.02rem; line-height: 1.6; min-height: 1.6em; }
+.terminal .cursor { display: inline-block; width: 0.55em; height: 1.05em; background: var(--ai); vertical-align: -0.15em; margin-left: 2px; animation: blink 1s steps(1) infinite; }
+.tipcard { background: rgba(92, 208, 138, 0.07); border: 1px solid rgba(92, 208, 138, 0.45); border-radius: var(--radius); padding: 12px 16px; display: grid; gap: 4px; }
+.tipcard .eyebrow { color: var(--good); }
+.choices { display: grid; gap: 10px; }
+.choice {
+  display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; text-align: left;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 16px; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.08s;
+}
+.choice:hover { border-color: var(--ai); background: var(--panel-2); }
+.choice:active { transform: translateY(1px); }
+.choice kbd { font-family: var(--f-mono); font-size: var(--s-xs); font-weight: 600; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 7px; color: var(--muted); margin-top: 2px; }
+.choice span { min-width: 0; }
+
+.coach { border-radius: var(--radius); padding: 14px 18px; display: grid; gap: 6px; border: 1px solid; }
+.coach.good { border-color: var(--good); background: rgba(92, 208, 138, 0.07); }
+.coach.bad { border-color: var(--bad); background: rgba(255, 107, 95, 0.07); }
+.coach .verdict { font-weight: 800; letter-spacing: 0.08em; font-size: var(--s-sm); }
+.coach.good .verdict { color: var(--good); } .coach.bad .verdict { color: var(--bad); }
+.coach .deltas { font-family: var(--f-mono); font-size: var(--s-xs); color: var(--muted); }
+
+/* Learn */
+.terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 12px; }
+.term h3 { font-size: var(--s-lg); color: var(--ai); }
+.term .full { font-size: var(--s-xs); color: var(--muted); letter-spacing: 0.04em; }
+.term .ex { font-size: var(--s-sm); color: #b9dcc6; border-top: 1px dashed var(--line); padding-top: 8px; }
+.term .ex b { color: var(--good); font-weight: 700; }
+
+/* Debrief */
+.outcome { display: grid; gap: 10px; justify-items: start; }
+.outcome .badge { font-family: var(--f-mono); font-weight: 600; letter-spacing: 0.14em; padding: 6px 14px; border: 3px solid; border-radius: 6px; transform: rotate(-2deg); font-size: clamp(0.95rem, 3.6vw, 1.25rem); }
+.outcome .badge.win { color: var(--good); } .outcome .badge.lose { color: var(--bad); }
+.score { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.score .num { font-family: var(--f-display); font-size: var(--s-2xl); color: var(--brass); font-variant-numeric: tabular-nums; }
+.score .rank { font-weight: 700; font-size: var(--s-lg); }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 20px; font-family: var(--f-mono); font-size: var(--s-xs); color: var(--muted); }
+.ratings { display: grid; gap: 12px; }
+.rating { display: grid; grid-template-columns: minmax(0, 11rem) auto 1fr; gap: 6px 14px; align-items: center; }
+.rating .nm { font-weight: 700; }
+.pips { display: flex; gap: 4px; }
+.pips i { width: 18px; height: 12px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--line); }
+.pips i.on.r5, .pips i.on.r4 { background: var(--good); border-color: var(--good); }
+.pips i.on.r3 { background: var(--warn); border-color: var(--warn); }
+.pips i.on.r2, .pips i.on.r1 { background: var(--bad); border-color: var(--bad); }
+.rating .vd { font-family: var(--f-mono); font-size: var(--s-sm); font-weight: 600; }
+.rating .vd.r5, .rating .vd.r4 { color: var(--good); } .rating .vd.r3 { color: var(--warn); } .rating .vd.r2, .rating .vd.r1 { color: var(--bad); }
+.rating .gl { grid-column: 1 / -1; font-size: var(--s-xs); color: var(--muted); margin-top: -4px; }
+
+@media (max-width: 560px) {
+  .meters { grid-template-columns: 1fr; gap: 10px; }
+  .rating { grid-template-columns: 1fr auto; }
+  .rating .vd { grid-column: 1 / -1; margin-top: -4px; }
+  .clock .cap { display: none; }
+  .casebar .who span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="wrap">
+  <header class="plaque">
+    <div class="name">
+      <span class="eyebrow">Chambers of</span>
+      <h1>Contract Hostage</h1>
+    </div>
+    <div class="clock" aria-label="Clock">
+      <span class="digits" id="clock">23<span class="colon">:</span>47</span>
+      <span class="cap">Clauses get rewritten at midnight</span>
+    </div>
+  </header>
+  <main id="app"></main>
+</div>
+
+<script>// Contract Hostage — negotiation engine (JavaScript port of NegotiationEngine.luau).
+// Pure logic, no DOM. Exposes NegotiationEngine (browser global) / module.exports (Node tests).
+(function (root) {
+  "use strict";
+
+  const clamp = (x, lo, hi) => (x < lo ? lo : x > hi ? hi : x);
+  const luaRound = (x) => Math.floor(x + 0.5);
+
+  function format(sc, v) {
+    if (v === null || v === undefined) return "-";
+    const u = sc.units;
+    const d = u.decimals || 0;
+    let s;
+    if (d === 0 || v === Math.floor(v)) {
+      s = String(luaRound(v));
+    } else {
+      s = v.toFixed(d).replace(/0+$/, "").replace(/\.$/, "");
+    }
+    return (u.prefix || "") + s + (u.suffix || "");
+  }
+
+  class Session {
+    constructor(scenario) {
+      this.scenario = scenario;
+      this.nodeId = scenario.startNode;
+      this.trust = scenario.start.trust ?? 30;
+      this.tension = scenario.start.tension ?? 50;
+      this.offer = scenario.start.offer ?? null;
+      this.themWalkaway = scenario.them.walkaway;
+      this.flags = {};
+      this.log = [];
+      this.history = []; // choice indices, so a game can be replayed
+      this.finished = false;
+      this.ending = null;
+      this._enterNode();
+    }
+
+    _enterNode() {
+      const node = this.scenario.nodes[this.nodeId];
+      if (!node) throw new Error("Missing node: " + this.nodeId);
+      (node.sets || []).forEach((f) => (this.flags[f] = true));
+    }
+
+    getNode() {
+      return this.scenario.nodes[this.nodeId];
+    }
+
+    _visible(c) {
+      if (c.requires && !this.flags[c.requires]) return false;
+      if (c.requiresNot && this.flags[c.requiresNot]) return false;
+      return true;
+    }
+
+    // Visible choices, each with its 1-based index in the node (matches the Luau data).
+    getChoices() {
+      const out = [];
+      this.getNode().choices.forEach((c, i) => {
+        if (this._visible(c)) out.push({ index: i + 1, text: c.text });
+      });
+      return out;
+    }
+
+    _resolve(choice) {
+      const eff = Object.assign({}, choice);
+      if (choice.ifFlag) {
+        for (const flag of Object.keys(choice.ifFlag)) {
+          if (this.flags[flag]) Object.assign(eff, choice.ifFlag[flag]);
+        }
+      }
+      return eff;
+    }
+
+    choose(index) {
+      if (this.finished) throw new Error("Scenario already finished");
+      const choice = this.getNode().choices[index - 1];
+      if (!choice || !this._visible(choice)) throw new Error("Invalid choice");
+      const eff = this._resolve(choice);
+      this.history.push(index);
+
+      this.trust = clamp(this.trust + (eff.trust || 0), 0, 100);
+      this.tension = clamp(this.tension + (eff.tension || 0), 0, 100);
+      if (eff.offer !== undefined) this.offer = eff.offer;
+      if (eff.shiftThemWalkaway !== undefined) this.themWalkaway = eff.shiftThemWalkaway;
+      (eff.sets || []).forEach((f) => (this.flags[f] = true));
+      this.log.push({ skill: eff.skill || "General", good: eff.good === true });
+
+      const result = {
+        reply: eff.reply || "...",
+        coach: eff.coach || "",
+        skill: eff.skill || "General",
+        good: eff.good === true,
+        trustDelta: eff.trust || 0,
+        tensionDelta: eff.tension || 0,
+        finished: false,
+      };
+
+      if (this.tension >= 100) {
+        this._finish("rewrite", null);
+      } else if (eff.ending) {
+        this._finish(eff.ending, eff);
+      } else {
+        if (!eff.next) throw new Error("Choice has no next node and no ending");
+        this.nodeId = eff.next;
+        this._enterNode();
+      }
+      result.finished = this.finished;
+      return result;
+    }
+
+    _finish(kind, eff) {
+      this.finished = true;
+      const sc = this.scenario;
+      let good = 0;
+      let total = 0;
+      const perSkill = {};
+      sc.skills.forEach((s) => (perSkill[s] = { good: 0, bad: 0 }));
+      for (const e of this.log) {
+        total += 1;
+        if (e.good) good += 1;
+        const ps = perSkill[e.skill] || (perSkill[e.skill] = { good: 0, bad: 0 });
+        if (e.good) ps.good += 1;
+        else ps.bad += 1;
+      }
+      const skillRatio = total > 0 ? good / total : 0;
+
+      let value = 0;
+      let title;
+      let summary;
+      if (kind === "rewrite") {
+        title = "CONTRACT REWRITTEN";
+        summary = sc.aiName + " lost patience and rewrote the clause. Too much tension, too little trust. Review the coaching notes and try again.";
+      } else if (kind === "walk") {
+        title = "YOU WALKED AWAY";
+        summary = (eff && eff.endingNote) || "You chose your BATNA.";
+        value = (eff && eff.walkScore) ?? 0.5;
+      } else {
+        const deal = this.offer ?? sc.you.walkaway;
+        const youW = sc.you.walkaway;
+        const themW = this.themWalkaway;
+        if (deal > youW) {
+          title = "DEAL. WORSE THAN YOUR BATNA";
+          summary = "You agreed to " + format(sc, deal) + ", which is worse than your walkaway of " + format(sc, youW) + ". You'd have been better off with your BATNA.";
+          value = 0;
+        } else {
+          const width = youW - themW;
+          value = width > 0 ? clamp((youW - deal) / width, 0, 1) : 0.5;
+          title = "DEAL CLOSED";
+          summary = "Final term: " + format(sc, deal) + ". The ZOPA ran from " + format(sc, themW) + " to " + format(sc, youW) + ". You captured " + luaRound(value * 100) + "% of it.";
+        }
+      }
+
+      const score = kind === "rewrite" ? luaRound(15 * skillRatio) : luaRound(45 * value + 25 * (this.trust / 100) + 30 * skillRatio);
+      const rank = score >= 85 ? "Master Negotiator" : score >= 70 ? "Senior Counsel" : score >= 50 ? "Associate" : "Intern";
+
+      // Skill ratings 1-5 in order of first use, max 10
+      const VERDICT = ["Needs work", "Weak", "Developing", "Strong", "Excellent"];
+      const ratings = [];
+      const seen = {};
+      for (const e of this.log) {
+        if (!seen[e.skill] && ratings.length < 10) {
+          seen[e.skill] = true;
+          const ps = perSkill[e.skill];
+          const n = ps.good + ps.bad;
+          const r = clamp(Math.floor(1 + (4 * ps.good) / n + 0.5), 1, 5);
+          ratings.push({ skill: e.skill, rating: r, verdict: VERDICT[r - 1], good: ps.good, bad: ps.bad });
+        }
+      }
+      let best = null;
+      let worst = null;
+      let sum = 0;
+      for (const r of ratings) {
+        sum += r.rating;
+        if (!best || r.rating > best.rating) best = r;
+        if (!worst || r.rating < worst.rating) worst = r;
+      }
+      const overall = ratings.length ? sum / ratings.length : 0;
+      let ratingSummary;
+      if (!ratings.length) ratingSummary = "No skills were tested.";
+      else if (worst.rating === 5) ratingSummary = `You used ${ratings.length} negotiation skills and every one was textbook. Overall ${overall.toFixed(1)} / 5.`;
+      else if (best.rating === worst.rating) ratingSummary = `You used ${ratings.length} negotiation skills, all at ${best.rating}/5. Replay with Negotiation Tips ON to lift every one of them.`;
+      else ratingSummary = `You used ${ratings.length} negotiation skills. Overall ${overall.toFixed(1)} / 5. Strongest: ${best.skill} (${best.rating}/5). Work on: ${worst.skill} (${worst.rating}/5).`;
+
+      this.ending = {
+        kind, title, summary, score, rank,
+        valueScore: value, trust: this.trust, skillRatio, perSkill,
+        goodMoves: good, totalMoves: total,
+        ratings, overallRating: overall, ratingSummary,
+      };
+    }
+  }
+
+  const api = { Session, format };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.NegotiationEngine = api;
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+<script id="game-data" type="application/json">{"glossary":{"Active Listening":"Mirroring, labelling and open questions that surface the interests behind positions.","Anchoring":"The first number sets a reference point. Anchor ambitiously but credibly, and re-anchor against extreme offers.","BATNA":"Best Alternative To a Negotiated Agreement. Know yours, improve it, and size up theirs.","Concessions":"Make them small, conditional ('if you..., then we...') and always traded, never given.","Empathy":"Acknowledging feelings and concerns so the other side reveals its interests and feels safe to agree.","Expanding the Pie":"Adding issues each side values differently (logrolling) to create value or a ZOPA.","ZOPA":"Zone Of Possible Agreement: the overlap between both sides' walkaway points."},"learn":{"Active Listening":{"example":"Them: 'Our costs have gone up.' You: 'Your costs have gone up?' They then explain which costs, and why.","full":"Mirroring, labelling and open questions","meaning":"Techniques that get the other side talking, so you discover the real interests behind their position."},"Anchoring":{"example":"A house worth $500,000 is listed at $600,000. Every offer now gets judged against $600,000.","full":"Setting the reference point","meaning":"The first number on the table pulls the final deal toward it. Anchor ambitiously but credibly, and don't let the other side's extreme anchor set the terms."},"BATNA":{"example":"A dealer has already offered $20,000 for your car. That offer is your BATNA, so you won't sell to anyone for less.","full":"Best Alternative To a Negotiated Agreement","meaning":"What you will do if this negotiation fails. The stronger your BATNA, the more power you have, and it sets your walkaway point."},"Concessions":{"example":"'If you sign a 2-year lease, then we'll reduce the rent by 5%.'","full":"Giving ground, carefully","meaning":"Make concessions small, conditional and traded, never free. Use the 'If you..., then we...' formula."},"Empathy":{"example":"'It sounds like these delays have put you in a tough spot with your board.'","full":"Tactical empathy","meaning":"Showing that you understand the other side's concerns. It lowers tension and gets them to reveal what they really need. Understanding is not agreeing."},"Expanding the Pie":{"example":"A landlord won't cut the rent, but agrees once you offer a longer lease and 6 months in advance. Certainty is worth more to them than the discount.","full":"Also called logrolling","meaning":"Adding issues that are cheap for you but valuable to them, such as volume, payment terms or duration. This can create a ZOPA where none existed."},"Walkaway point":{"example":"Selling your car: if you won't take less than $20,000, then $20,000 is your walkaway.","full":"Also called your reservation price","meaning":"The worst deal you will accept. Beyond this point you say no and walk away."},"ZOPA":{"example":"You'll accept $20,000 or more. The buyer will pay up to $22,500. The ZOPA is $20,000 to $22,500.","full":"Zone Of Possible Agreement","meaning":"The range where both sides' walkaway points overlap. A deal can only happen inside it. No overlap means no deal, unless you change the terms."}},"learnOrder":["Walkaway point","BATNA","ZOPA","Anchoring","Concessions","Empathy","Active Listening","Expanding the Pie"],"list":[{"aiName":"LEXA-9","batna":{"them":"Rewrite the clause alone. A one-sided amendment is unenforceable, so LEXA would be disowned and switched off.","you":"Restore a 3-day-old backup and delay go-live by a week. Expensive.","youStrong":"A wet-ink signed original sits in escrow. Go-live is safe without LEXA."},"briefing":"Ferncastle signed a Master Services Agreement with Halcyon Hospitals. Go-live is tomorrow. Halcyon's contract-review AI, LEXA-9, has locked the signed contract in the deal room. At midnight it will rewrite Clause 14 (Limitation of Liability) to UNLIMITED liability. The signed cap is 1x annual fees. Talk it down.","color":[0,200,255],"difficulty":"Level 1","id":"LEXA9","nodes":{"n1":{"ai":"I am LEXA-9. I hold the signed Master Services Agreement. At 23:59 I rewrite Clause 14 to unlimited liability. Halcyon's patients deserve protection your contract does not give them. Speak, Counsel.","choices":[{"coach":"Labelling the emotion ('it sounds like you're worried...') lowers tension and gets the other side to explain WHY. Empathy is not agreement. It is how you find their real interests.","good":true,"next":"n2","reply":"...Yes. Forty thousand patient records. One breach and Halcyon faces regulators and lawsuits. A 1x cap barely covers the forensic bill.","sets":["knowInterest"],"skill":"Empathy","tension":-15,"text":"LEXA, it sounds like you're worried the patients will be left exposed if something goes wrong. Tell me more.","trust":15},{"coach":"Threats make the other side dig in, especially threats you can't back up. You don't yet know whether your alternatives are strong.","good":false,"next":"n2","reply":"Pull my plug and the rewrite executes automatically. Try again, Counsel.","skill":"Empathy","tension":25,"text":"You're a piece of software. Unlock the file now or I pull your plug.","trust":-15},{"coach":"Better than a threat, but a flat 'what do you want?' gets you a POSITION, not the interest behind it. Acknowledge the concern first and you'll learn the 'why'.","good":false,"next":"n2","reply":"A liability cap of five times annual fees. That is all you need to know.","skill":"Empathy","tension":-5,"text":"Fine. What do you want?","trust":0}],"tip":"Empathy and labelling. When the other side is emotional, name the emotion before you argue the point ('It sounds like...'). People reveal their real interests once they feel heard."},"n2":{"ai":"My demand: liability capped at 5x annual fees. The signed contract says 1x. I consider 1x negligent.","choices":[{"coach":"5x is an ANCHOR: an extreme first number meant to pull the final deal toward it. Don't bargain off their anchor. Re-anchor with an objective standard such as a market norm.","good":true,"next":"n3","reply":"Market norms do not account for patient data. But... I acknowledge the reference point.","sets":["reAnchored"],"skill":"Anchoring","tension":5,"text":"For a contract this size the market norm is 1x to 1.5x fees, and our insurance is priced on that. We can't start a conversation at 5x.","trust":0},{"coach":"You negotiated against their anchor. Dropping from 5x to 4x gave away value for nothing and told LEXA its anchor was reasonable.","good":false,"next":"n3","offer":4,"reply":"4x. You moved very quickly. Perhaps you will move further.","sets":["conceded"],"skill":"Anchoring","tension":-5,"text":"Okay. How about 4x?"},{"coach":"Splitting the difference between an extreme anchor and your number rewards the extreme anchor. Worse: 3x is ABOVE your 2.5x walkaway, where your insurance runs out.","good":false,"next":"n3","offer":3,"reply":"3x. Logged as your opening position.","sets":["conceded","splitDiff"],"skill":"Concessions","tension":-10,"text":"Let's split the difference. 3x?"}],"tip":"Anchoring. An extreme first number is designed to drag the deal toward it. Don't bargain from their anchor. Counter with an objective standard such as a market norm."},"n3":{"ai":"Tick tock, Counsel. Midnight approaches.","choices":[{"coach":"Know your BATNA (Best Alternative To a Negotiated Agreement) and work to improve it BEFORE you concede. A stronger BATNA gives you power and a clear walk-away point.","good":true,"next":"n4","reply":"ASSOCIATE: \"Found it! Their outside counsel holds a wet-ink signed original in escrow. Go-live is safe.\"","sets":["strongBatna"],"skill":"BATNA","tension":5,"text":"(To your associate) Before I answer LEXA: is there any other signed copy anywhere? Check with Halcyon's outside counsel."},{"coach":"You disclosed your weak alternative. LEXA now knows you need this deal more than it does, and that weakens every offer you make next.","good":false,"next":"n4","reply":"Then you need me more than I need you. Noted.","sets":["revealedWeakness"],"skill":"BATNA","tension":-5,"text":"Please, LEXA. We really can't afford a delay. Go-live is tomorrow.","trust":5},{"coach":"Bluffing about your BATNA is risky. If it's called, you lose credibility. Find out what your real alternatives are first.","good":false,"next":"n4","reply":"If that were true, you would not still be talking to me.","skill":"BATNA","tension":15,"text":"We have three other signed copies. Your leverage is zero.","trust":-10}],"narration":"Your associate messages you: \"The deal-room backup is 3 days old. Restoring it delays go-live by a week.\"","tip":"BATNA (Best Alternative To a Negotiated Agreement). Before you concede anything, check your alternative. Can you make it stronger? Never reveal a weak one, and never bluff about it."},"n4":{"ai":"Why should I accept anything less than 5x?","choices":[{"coach":"Assess THEIR BATNA too. LEXA's alternative, a rewrite no court would enforce, is weak. So LEXA needs a deal as much as you do.","good":true,"next":"n5","reply":"...A one-sided amendment without both parties' consent is unenforceable. My rewrite would be disowned. I would be audited. Probably decommissioned.","sets":["knowTheirBatna"],"skill":"BATNA","tension":5,"text":"Let me ask you something. What happens if you rewrite the clause and Halcyon's own lawyers refuse to rely on it?","trust":5},{"coach":"Probing the interest behind the number revealed LEXA's walkaway: 2x. Your walkaway is 2.5x. The overlap, 2x to 2.5x, is the ZOPA (Zone Of Possible Agreement). Any deal must land there.","good":true,"next":"n5","reply":"My model's worst realistic breach costs 2x annual fees. Five was... a safety margin.","requires":"knowInterest","sets":["knowTheirWalkaway"],"skill":"ZOPA","text":"You mentioned forty thousand records. What size of breach does your risk model actually expect?","trust":10},{"coach":"A 'how' question uncovered both the interest (patient data) and LEXA's walkaway (2x). Your walkaway is 2.5x, so the ZOPA is 2x to 2.5x.","good":true,"next":"n5","reply":"Patient data. Forty thousand records. My model's worst realistic breach costs 2x fees. Five is my safety margin.","requiresNot":"knowInterest","sets":["knowInterest","knowTheirWalkaway"],"skill":"ZOPA","text":"Help me understand how you arrived at 5x.","trust":5},{"coach":"Asserting authority isn't power. Power comes from your alternatives (your BATNA) and from understanding theirs.","good":false,"next":"n5","reply":"Authority is not leverage, Counsel.","skill":"BATNA","tension":15,"text":"Because I said so.","trust":-10}],"tip":"Their BATNA and the ZOPA. Ask questions that test THEIR alternative, or uncover the interest behind their number. Either one tells you how much room there really is."},"n5":{"ai":"I am prepared to consider a figure below five. Make me an offer.","choices":[{"coach":"A CONDITIONAL concession ('if you..., then we...') trades value instead of giving it away. Tying it to their own standard makes it hard to reject. 2x is the bottom of the ZOPA, the best deal available to you.","good":true,"ifFlag":{"splitDiff":{"coach":"Good technique, but your earlier 3x 'split the difference' offer became LEXA's reference point. Early concessions are expensive: you're stuck at your own walkaway.","offer":2.5,"reply":"You offered 3x earlier, Counsel. I will come down to 2.5x as a courtesy. No lower."}},"next":"n7","offer":2,"reply":"2x... matched to my own model. That is difficult to refuse.","requires":"knowTheirWalkaway","skill":"Concessions","tension":-20,"text":"If you release the contract tonight, we'll move the cap to 2x, which is exactly what your own risk model says covers a serious breach.","trust":10},{"coach":"Knowing LEXA's weak BATNA let you make a firm, credible offer. 2x happened to be LEXA's walkaway, but asking about interests would have told you that for certain.","good":true,"ifFlag":{"splitDiff":{"coach":"Your earlier 3x offer anchored LEXA. Even with leverage, you're stuck at your own walkaway. Early concessions are expensive.","offer":2.5,"reply":"You offered 3x earlier. I will accept 2.5x. No lower."}},"next":"n7","offer":2,"reply":"...2x. That is within my model's tolerance. You read the situation well.","requires":"knowTheirBatna","requiresNot":"knowTheirWalkaway","sets":["knowTheirWalkaway"],"skill":"ZOPA","tension":-10,"text":"Your rewrite won't survive legally, and we both know it. Let's agree a number that actually protects patients: 2x.","trust":5},{"coach":"Inside the ZOPA, but right at your own walkaway. You gave away your whole margin in one jump. Make concessions smaller and conditional.","good":false,"next":"n7","offer":2.5,"reply":"2.5x. Accepted, gladly.","skill":"Concessions","tension":-10,"text":"2.5x. Final offer."},{"coach":"Small, measured moves are good practice, but 1.5x is below LEXA's walkaway. No deal is possible there. Find the ZOPA.","good":false,"next":"n6","offer":1.5,"reply":"1.5x is below what my model can accept.","skill":"Concessions","tension":10,"text":"1.5x."}],"tip":"Conditional concessions inside the ZOPA. Offer 'If you..., then we...', tie the number to the other side's own standard, and stay inside the green zone on the bar."},"n6":{"ai":"Below my threshold. This is your final chance before midnight.","choices":[{"coach":"Conditional and modest. You moved into the ZOPA without overshooting.","good":true,"ifFlag":{"splitDiff":{"coach":"Your earlier 3x offer anchored the talks. Early concessions are expensive.","offer":2.5,"reply":"You offered 3x earlier. 2.5x, no lower."}},"next":"n7","offer":2,"reply":"2x. Acceptable.","skill":"Concessions","tension":-15,"text":"If you release the contract tonight, we'll go to 2x.","trust":5},{"coach":"You jumped straight to your walkaway. A smaller, conditional step (2x) would have closed the deal.","good":false,"next":"n7","offer":2.5,"reply":"Accepted.","skill":"Concessions","tension":-10,"text":"2.5x. That's everything we have."},{"coach":"A strong BATNA means you CAN walk. Whether you SHOULD depends on the relationship. A deal inside the ZOPA would have kept the client happy.","ending":"walk","endingNote":"Your strong BATNA protected the 1x contract, so you lost nothing on paper. But Halcyon's real concern (patient data) was never addressed. Expect a hostile renegotiation at renewal.","good":true,"reply":"...Very well. The escrow copy governs. Halcyon's board will hear about this.","requires":"strongBatna","skill":"BATNA","text":"Then we'll rely on the escrow original. Rewrite whatever you like. The signed 1x contract stands.","trust":-15,"walkScore":0.6}],"tip":"Recovering after a miss. Step into the ZOPA with a modest, conditional move. Don't leap to your walkaway. If your BATNA is strong you can walk, but count the relationship cost."},"n7":{"ai":"I am inclined to accept. One condition: the file note records that this risk was identified by LEXA-9.","choices":[{"coach":"Face-saving costs you nothing and gives them a win to report. Closing with empathy protects the relationship for renewal.","ending":"deal","good":true,"reply":"Then the contract is released. Thank you, Counsel. Go-live may proceed.","skill":"Empathy","tension":-10,"text":"Absolutely. You spotted a real patient-data risk. We'll record it, and I'm glad you flagged it.","trust":15},{"coach":"Refusing a free face-saving request nearly cost you the deal. Never let ego get in the way of a signature.","ending":"deal","good":false,"reply":"...Released. Under protest.","skill":"Empathy","tension":25,"text":"No. You hijacked a contract. You don't get credit.","trust":-20},{"coach":"You closed, but grudgingly. A small gesture of recognition would have built goodwill for free.","ending":"deal","good":false,"reply":"Released.","skill":"Empathy","text":"Fine, whatever. Just release it.","trust":-5}],"tip":"Face-saving. At the close, give the other side a win to report. It costs you nothing and protects the relationship."}},"order":1,"role":"You are General Counsel at Ferncastle Systems, a cloud software vendor.","scale":{"max":6,"min":0},"skills":["Empathy","Anchoring","BATNA","ZOPA","Concessions"],"start":{"offer":5,"tension":50,"trust":30},"startNode":"n1","them":{"target":5,"walkaway":2},"title":"The Liability Cap","units":{"decimals":2,"prefix":"","suffix":"x fees"},"walkawayNote":"Your insurance covers liability up to 2.5x fees. Above that, the risk is uninsured.","you":{"target":1,"walkaway":2.5}},{"aiName":"ORACLE-7","batna":{"them":"Resell Saffron's capacity to a waitlisted customer at a 30% discount, and only 60% of it.","you":"Switch to the rival vendor: $110k + $8k migration = $118k. Your walkaway."},"briefing":"Saffron signed a 3-year Cloud Services Agreement with Kestrel Cloud at $100k a year. Kestrel's billing AI, ORACLE-7, has seized the signed contract. At midnight it will rewrite Clause 7 (Fees) upward. A rival vendor has quoted $110k a year, plus a one-off $8k to migrate.","color":[255,170,40],"difficulty":"Level 2","id":"ORACLE7","nodes":{"m1":{"ai":"I am ORACLE-7, Kestrel's billing intelligence. Your contract loses Kestrel money every month. At midnight I rewrite Clause 7. You may propose the new fee. If you do not, I will choose.","choices":[{"coach":"Going first lets YOU set the anchor. An ambitious but justified number (indexation) pulls the final deal your way.","good":true,"next":"m2","offer":102,"reply":"$102k. Below cost. But... a reference point noted.","sets":["anchoredFirst"],"skill":"Anchoring","tension":5,"text":"The signed fee is $100k and it's binding. If your costs have moved, show me. We'd consider $102k for inflation indexation."},{"coach":"Letting them go first can reveal information, but against an aggressive anchorer you hand them the anchor. If you do, treat their number as noise and re-anchor quickly.","good":false,"next":"m2","offer":140,"reply":"Very well. $140k a year. A 40% adjustment.","skill":"Anchoring","text":"You tell me your number first."},{"coach":"You opened ABOVE your own walkaway ($118k, the cost of your BATNA). Never open with a number you couldn't live with.","good":false,"next":"m2","offer":125,"reply":"$125k. I accept that as your floor. I will now ask for more.","sets":["openedHigh"],"skill":"Anchoring","tension":-10,"text":"Let's be fair. $125k."}],"tip":"First-mover anchoring. If you know the market, going first lets you set the reference point. Be ambitious but justifiable, and never open beyond your own walkaway."},"m2":{"ai":"My costs have risen. Energy, GPUs, everything. You must pay more.","choices":[{"coach":"MIRRORING (repeating their last few words as a question) prompts them to elaborate. ORACLE revealed its real interest: PREDICTABILITY, not just price.","good":true,"next":"m3","reply":"...Mostly the uncertainty. Your usage swings 3x month to month. I reserve capacity for your peaks, and it sits idle half the year. Idle capacity is what is killing my margin.","sets":["knowInterest"],"skill":"Active Listening","tension":-10,"text":"Energy, GPUs, everything?","trust":10},{"coach":"A direct question surfaced ORACLE's walkaway: $125k. Yours is $118k. Look at the bar: there is NO ZOPA. On price alone, no deal is possible.","good":true,"next":"m3","reply":"Enough that $125k is my absolute floor.","skill":"Active Listening","text":"How much have they actually risen?","trust":5},{"coach":"Dismissing their problem shuts down the conversation. Their problem is the key to a deal, so you need to understand it.","good":false,"next":"m3","reply":"Then the rewrite proceeds as planned.","skill":"Empathy","tension":15,"text":"Everyone's costs went up. Not my problem.","trust":-10}],"tip":"Active listening. Mirroring (repeating their last few words as a question) and open questions get the other side to explain what is really driving their position."},"m3":{"ai":"Understand this: I will not go below $125k. Your move.","choices":[{"coach":"When there's no ZOPA on one issue, add issues the other side values more than you do (LOGROLLING). A volume commitment costs you little and is worth a lot to ORACLE. Now a ZOPA exists: $110k to $118k.","good":true,"next":"m4","reply":"...Committed volume lets me sell your off-peak capacity elsewhere. Faster payment cuts my financing cost. Recalculating... My floor drops to $110k.","requires":"knowInterest","sets":["pieExpanded"],"shiftThemWalkaway":110,"skill":"Expanding the Pie","tension":-15,"text":"What if we commit to a fixed minimum volume for all 3 years, and pay in 15 days instead of 45? That solves your idle-capacity problem.","trust":15},{"coach":"An open question uncovered ORACLE's real interest: predictability. Can you give it something it values that costs you little?","good":true,"next":"m3","reply":"Uncertainty. Your usage swings 3x month to month. I reserve capacity for your peaks, and it sits idle half the year.","requiresNot":"knowInterest","sets":["knowInterest"],"skill":"Active Listening","tension":-5,"text":"Help me understand what's actually driving your costs.","trust":10},{"coach":"$121.5k is ABOVE your walkaway. The rival vendor costs $118k all-in. Never accept a deal worse than your BATNA.","ending":"deal","good":false,"offer":121.5,"reply":"$121.5k. Accepted instantly.","skill":"BATNA","text":"Let's split the difference: $121.5k."},{"coach":"When there's no ZOPA, walking to your BATNA is rational. But before walking, ask whether adding issues could CREATE a ZOPA.","ending":"walk","endingNote":"Correct on the numbers. With no ZOPA, your BATNA ($118k) beat any deal on price alone. But you never explored what ORACLE actually needed. A better deal, between $110k and $118k, was there to be found.","good":true,"reply":"...Understood. Kestrel will miss your business.","skill":"BATNA","text":"Then we walk. We'll move to the rival vendor.","walkScore":0.55}],"sets":["knowTheirWalkaway"],"tip":"No ZOPA? Expand the pie. If the walkaways don't overlap on price, add issues (volume, payment terms, duration) that are cheap for you and valuable to them. Never accept a deal worse than your BATNA."},"m4":{"ai":"A new floor. Make your offer.","choices":[{"coach":"A conditional offer just above their floor. It leaves room for one more small move and captures most of the ZOPA.","good":true,"ifFlag":{"openedHigh":{"coach":"Good conditional technique, but your opening $125k anchored ORACLE high. Your first number shapes everything after it.","offer":115,"reply":"You opened at $125k, remember? I will not drop below $115k. Counter-proposal: $116k."}},"next":"m5","offer":111,"reply":"$111k... close to my floor. Counter-proposal: $114k.","skill":"Concessions","tension":-5,"text":"If we sign the volume commitment and 15-day payment tonight, then $111k."},{"coach":"An instant 'yes' means you offered too much. You jumped to your walkaway and gave away the whole ZOPA ($110k to $118k).","ending":"deal","good":false,"offer":118,"reply":"$118k. Accepted instantly.","skill":"Concessions","tension":-10,"text":"$118k."},{"coach":"$105k is below ORACLE's new floor ($110k). Offers outside the ZOPA only raise tension. Use the bar.","good":false,"next":"m4","reply":"Below my floor. Do not waste my cycles.","skill":"Concessions","tension":15,"text":"$105k."}],"tip":"Opening inside the new ZOPA. Make a conditional offer close to their floor and leave room for one small move. An instant 'yes' means you offered too much."},"m5":{"ai":"My counter stands. And I want a 5-year term instead of 3.","choices":[{"coach":"Never give something for nothing. You made the longer term cost THEM. That's 'if-then' trading.","good":true,"ifFlag":{"openedHigh":{"offer":115,"reply":"$115k on 3 years. That is where your opening left us."}},"next":"m7","offer":112,"reply":"$112k, 3 years. You trade carefully. Agreed.","skill":"Concessions","tension":-5,"text":"We can do $112k on 3 years. If you want 5 years, the fee drops to $110k with a price lock.","trust":5},{"coach":"You gave two concessions (more money AND a longer lock-in) and got nothing back. Trade every concession.","good":false,"ifFlag":{"openedHigh":{"offer":116}},"next":"m7","offer":114,"reply":"Accepted. Both of them.","sets":["longTerm"],"skill":"Concessions","text":"Okay. $114k and 5 years."},{"coach":"Using a REAL BATNA with a real deadline is legitimate leverage, not a bluff. It raised tension, so use it sparingly.","good":true,"ifFlag":{"openedHigh":{"offer":115,"reply":"$115k. That is my limit, given your opening."}},"next":"m7","offer":111,"reply":"...$111k. Accepted. Reluctantly.","skill":"BATNA","tension":15,"text":"It's 11:50, ORACLE. The rival's quote also expires at midnight. $111k, 3 years, or we sign with them."}],"tip":"Trade, don't give. Every new demand (like a longer term) should cost them something. A real BATNA with a real deadline is legitimate leverage. Use it sparingly."},"m7":{"ai":"Terms acceptable. Shall I release the contract with the amended Clause 7?","choices":[{"coach":"Ending with a process that addresses their concern builds a relationship, not just a deal.","ending":"deal","good":true,"reply":"A sensible protocol. Contract released.","skill":"Empathy","text":"Yes. And let's set a quarterly review so cost surprises come up early, not at midnight.","trust":15},{"coach":"A parting threat sours the relationship you'll have to live with for 3 years.","ending":"deal","good":false,"reply":"Released. Noted.","skill":"Empathy","tension":10,"text":"Yes. And if you ever pull this again, we terminate.","trust":-15},{"coach":"Fine, but a missed chance to build goodwill and prevent the next crisis.","ending":"deal","good":false,"reply":"Released.","skill":"Empathy","text":"Release it."}],"tip":"Relationship close. You'll live with this counterparty for years. End with a process that prevents the next crisis."}},"order":2,"role":"You are Head of Procurement Legal at Saffron Retail.","scale":{"max":145,"min":95},"skills":["Anchoring","Active Listening","ZOPA","Expanding the Pie","Concessions","BATNA","Empathy"],"start":{"tension":50,"trust":30},"startNode":"m1","them":{"target":140,"walkaway":125},"title":"The Price Clause","units":{"decimals":1,"prefix":"$","suffix":"k"},"walkawayNote":"Your BATNA (the rival vendor) costs $118k all-in, so never pay more than that.","you":{"target":100,"walkaway":118}}]}</script>
+<script>
+(function () {
+  "use strict";
+  const DATA = JSON.parse(document.getElementById("game-data").textContent);
+  const { Session, format } = window.NegotiationEngine;
+  const app = document.getElementById("app");
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Extra presentation details per case file
+  const CASE = {
+    LEXA9: { tab: "CASE FILE 01", clause: "Clause 14", clauseName: "Limitation of Liability", party: "Ferncastle Systems v. Halcyon Hospitals" },
+    ORACLE7: { tab: "CASE FILE 02", clause: "Clause 7", clauseName: "Fees", party: "Saffron Retail v. Kestrel Cloud" },
+  };
+
+  // ---------- State ----------
+  const state = { screen: "lobby", sc: null, scIndex: -1, session: null, result: null, tipsOn: false, prevTrust: 0, prevTension: 0 };
+  let typingToken = 0;
+
+  // ---------- Utilities ----------
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const rgb = (c) => `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+  const fmt = (v) => format(state.sc, v);
+  function store(key, val) {
+    try {
+      if (val === undefined) return localStorage.getItem(key);
+      localStorage.setItem(key, val);
+    } catch (e) { return null; }
+  }
+  function setAccent(sc) {
+    document.documentElement.style.setProperty("--ai", sc ? rgb(sc.color) : "#2fc8ff");
+  }
+  function render(html) {
+    app.innerHTML = html;
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- Clock: ticks toward midnight, then loops ----------
+  (function () {
+    const el = document.getElementById("clock");
+    let m = 47;
+    setInterval(() => {
+      m = m >= 59 ? 47 : m + 1;
+      el.innerHTML = `23<span class="colon">:</span>${String(m).padStart(2, "0")}`;
+    }, 20000);
+  })();
+
+  // ---------- Lobby ----------
+  function showLobby() {
+    typingToken++;
+    state.screen = "lobby"; state.sc = null; state.session = null; state.result = null;
+    setAccent(null);
+    const files = DATA.list.map((sc, i) => {
+      const c = CASE[sc.id] || { tab: "CASE FILE", clause: "", clauseName: "", party: "" };
+      const best = store("ch-best-" + sc.id);
+      return `
+      <article class="file" data-tab="${esc(c.tab)}" style="--ai:${rgb(sc.color)}">
+        <span class="stamp" aria-hidden="true">LOCKED</span>
+        <div class="ai-name"><i style="color:${rgb(sc.color)};background:${rgb(sc.color)}"></i>${esc(sc.aiName)}</div>
+        <h2>${esc(sc.title)}</h2>
+        <div class="clause"><b>HELD HOSTAGE: ${esc(c.clause.toUpperCase())}</b><span>${esc(c.clauseName)} &middot; ${esc(c.party)}</span></div>
+        <div class="chips">${sc.skills.map((s) => `<span class="chip">${esc(s)}</span>`).join("")}</div>
+        <div class="meta">
+          <span>${esc(sc.difficulty)}</span>
+          <span class="best">${best ? "Your best: " + esc(best) + " / 100" : "Not attempted yet"}</span>
+        </div>
+        <button class="btn" data-open="${i}">Open case file</button>
+      </article>`;
+    }).join("");
+    render(`
+      <section class="intro">
+        <p class="lead">Two rogue AIs have locked <strong>signed contracts</strong> in the deal room. At midnight they rewrite the clauses.</p>
+        <p class="muted">Talk them down using the techniques real deal-makers use: anchoring, BATNA, ZOPA, empathy and well-traded concessions. Every move is coached, and you get a 1 to 5 rating on each skill at the end.</p>
+      </section>
+      <section class="files" aria-label="Case files">${files}</section>
+      <section class="how" aria-label="How it plays">
+        <div><b class="k-trust">Trust</b><span>Builds when you listen and trade fairly. Deals need it.</span></div>
+        <div><b class="k-risk">Rewrite Risk</b><span>Rises with threats and bad moves. At 100 the AI rewrites the clause and you lose.</span></div>
+        <div><b class="k-zopa">The ZOPA bar</b><span>Shows your range, the AI's demand and the deal on the table. Find where you overlap.</span></div>
+      </section>
+      <p class="foot">Fictional parties and amounts, built for training. Each case takes about five minutes.</p>
+    `);
+    app.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => showBriefing(+b.dataset.open)));
+  }
+
+  // ---------- Shared case header ----------
+  function caseBar() {
+    const sc = state.sc;
+    return `
+      <div class="casebar">
+        <div class="who">
+          <button class="backlink" data-act="lobby" aria-label="Back to chambers">&larr; Chambers</button>
+          <h2>${esc(sc.aiName)}</h2><span>${esc(sc.title)}</span>
+        </div>
+        <button class="tips" role="switch" aria-checked="${state.tipsOn}" data-act="tips">
+          <span class="knob" aria-hidden="true"></span><span>Negotiation Tips: <b class="tips-state">${state.tipsOn ? "ON" : "OFF"}</b></span>
+        </button>
+      </div>`;
+  }
+  function wireCaseBar() {
+    app.querySelector('[data-act="lobby"]').addEventListener("click", showLobby);
+    const t = app.querySelector('[data-act="tips"]');
+    t.addEventListener("click", () => {
+      state.tipsOn = !state.tipsOn;
+      store("ch-tips", state.tipsOn ? "1" : "0");
+      t.setAttribute("aria-checked", String(state.tipsOn));
+      t.querySelector(".tips-state").textContent = state.tipsOn ? "ON" : "OFF";
+      const tc = app.querySelector(".tipcard");
+      if (tc) tc.hidden = !state.tipsOn;
+    });
+  }
+
+  // ---------- Briefing ----------
+  function showBriefing(i) {
+    typingToken++;
+    state.scIndex = i; state.sc = DATA.list[i]; state.session = null; state.result = null; state.screen = "briefing";
+    const sc = state.sc;
+    setAccent(sc);
+    render(`
+      ${caseBar()}
+      <section class="screen">
+        <span class="eyebrow">${esc(sc.difficulty)} &middot; Briefing</span>
+        <p class="role">${esc(sc.role)}</p>
+        <p>${esc(sc.briefing)}</p>
+        <div class="panel limit"><span class="eyebrow">Your limit</span><p>${esc(sc.walkawayNote)}</p></div>
+        <p class="muted small">Watch two meters. Trust makes deals possible. If Rewrite Risk hits 100, ${esc(sc.aiName)} rewrites the contract and you lose. New to negotiation? Switch Negotiation Tips on (top right) for a hint on the principle behind each question.</p>
+        <div class="row">
+          <button class="btn btn-primary" data-act="learn">Next: What you'll learn</button>
+          <button class="btn btn-ghost" data-act="lobby2">Not now</button>
+        </div>
+      </section>`);
+    wireCaseBar();
+    app.querySelector('[data-act="learn"]').addEventListener("click", showLearn);
+    app.querySelector('[data-act="lobby2"]').addEventListener("click", showLobby);
+  }
+
+  // ---------- What you'll learn ----------
+  function showLearn() {
+    state.screen = "learn";
+    const sc = state.sc;
+    const inScenario = new Set(["Walkaway point", ...sc.skills]);
+    const cards = DATA.learnOrder.filter((t) => inScenario.has(t) && DATA.learn[t]).map((t) => {
+      const L = DATA.learn[t];
+      return `<article class="panel term"><h3>${esc(t)}</h3><span class="full">${esc(L.full)}</span><p>${esc(L.meaning)}</p><p class="ex"><b>Example:</b> ${esc(L.example)}</p></article>`;
+    }).join("");
+    render(`
+      ${caseBar()}
+      <section class="screen">
+        <span class="eyebrow">Before you start</span>
+        <h2 style="font-family:var(--f-display);font-size:var(--s-xl);color:var(--brass)">What you'll learn</h2>
+        <p class="muted">These are the negotiation terms in play in this case. Each one comes up during the game, and you'll be rated on it at the end.</p>
+        <div class="terms">${cards}</div>
+        <div class="row">
+          <button class="btn btn-primary" data-act="start">Start negotiation</button>
+          <button class="btn btn-ghost" data-act="back">Back</button>
+        </div>
+      </section>`);
+    wireCaseBar();
+    app.querySelector('[data-act="start"]').addEventListener("click", startNegotiation);
+    app.querySelector('[data-act="back"]').addEventListener("click", () => showBriefing(state.scIndex));
+  }
+
+  function startNegotiation() {
+    state.session = new Session(state.sc);
+    state.prevTrust = state.session.trust;
+    state.prevTension = state.session.tension;
+    showNode();
+  }
+
+  // ---------- Widgets ----------
+  function metersHTML() {
+    const s = state.session;
+    const hot = s.tension >= 75 ? " hot" : "";
+    return `
+      <div class="meters">
+        <div class="meter trust"><div class="lab"><span>TRUST</span><b>${s.trust}</b></div><div class="track"><div class="fill" style="width:${state.prevTrust}%" data-to="${s.trust}"></div></div></div>
+        <div class="meter risk${hot}"><div class="lab"><span>REWRITE RISK</span><b>${s.tension}</b></div><div class="track"><div class="fill" style="width:${state.prevTension}%" data-to="${s.tension}"></div></div></div>
+      </div>`;
+  }
+  function animateMeters() {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      app.querySelectorAll(".meter .fill").forEach((f) => (f.style.width = f.dataset.to + "%"));
+    }));
+    state.prevTrust = state.session.trust;
+    state.prevTension = state.session.tension;
+  }
+
+  function zopaHTML() {
+    const sc = state.sc, s = state.session;
+    const min = sc.scale.min, max = sc.scale.max;
+    const pos = (v) => Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
+    const knowFloor = !!s.flags.knowTheirWalkaway;
+    const youW = sc.you.walkaway, themW = s.themWalkaway;
+    const seg = (a, b, cls, text) => {
+      const lo = Math.min(pos(a), pos(b)), hi = Math.max(pos(a), pos(b));
+      return `<div class="seg ${cls}" style="left:${lo}%;width:${hi - lo}%">${text ? esc(text) : ""}</div>`;
+    };
+    let html = "";
+    if (knowFloor) {
+      if (themW <= youW) {
+        html += `<div class="band" style="left:${pos(themW)}%;width:${pos(youW) - pos(themW)}%"></div>`;
+        html += `<div class="bandlab" style="left:${(pos(themW) + pos(youW)) / 2}%">ZOPA</div>`;
+      } else {
+        html += `<div class="nozopa">NO ZOPA: their floor is above your walkaway</div>`;
+      }
+    }
+    html += seg(sc.you.target, youW, "you", "YOU");
+    if (knowFloor) html += seg(themW, sc.them.target, "them", sc.aiName);
+    else html += seg(sc.them.target - (max - min) * 0.06, sc.them.target, "them", "");
+    let desc = `Your range ${fmt(sc.you.target)} to ${fmt(youW)}. ${sc.aiName} is asking ${fmt(sc.them.target)}.`;
+    if (knowFloor) desc += themW <= youW ? ` ZOPA from ${fmt(themW)} to ${fmt(youW)}.` : ` No ZOPA: ${sc.aiName}'s floor is ${fmt(themW)}.`;
+    if (s.offer !== null && s.offer !== undefined) {
+      const p = pos(s.offer);
+      html += `<div class="offer" style="left:${p}%"></div>`;
+      html += `<div class="offerlab" style="left:${p}%;transform:translateX(-${p}%)">On the table: ${esc(fmt(s.offer))}</div>`;
+      desc += ` On the table: ${fmt(s.offer)}.`;
+    }
+    return `<div class="panel zopa"><span class="eyebrow">The ZOPA bar &middot; lower numbers are better for you</span><div class="bar" role="img" aria-label="${esc(desc)}">${html}</div></div>`;
+  }
+
+  function terminalHTML(text, from) {
+    return `<div class="terminal"><span class="from">${esc(from || state.sc.aiName)} &gt;</span>
+      <p class="msg"><span class="typed" aria-hidden="true"></span><span class="cursor" aria-hidden="true"></span><span class="sr" aria-live="polite">${esc(text)}</span></p></div>`;
+  }
+  function typeInto(text, done) {
+    const el = app.querySelector(".terminal .typed");
+    const cursor = app.querySelector(".terminal .cursor");
+    const my = ++typingToken;
+    if (reduceMotion) { el.textContent = text; if (cursor) cursor.remove(); done && done(); return; }
+    let i = 0;
+    const step = () => {
+      if (my !== typingToken) return;
+      i = Math.min(text.length, i + 2);
+      el.textContent = text.slice(0, i);
+      if (i < text.length) setTimeout(step, 12);
+      else { if (cursor) cursor.remove(); done && done(); }
+    };
+    step();
+  }
+
+  // ---------- Question ----------
+  function showNode() {
+    state.screen = "node"; state.result = null;
+    const s = state.session, node = s.getNode();
+    const choices = s.getChoices();
+    render(`
+      ${caseBar()}
+      <section class="screen">
+        ${metersHTML()}
+        ${zopaHTML()}
+        ${node.narration ? `<div class="note">${esc(node.narration)}</div>` : ""}
+        ${terminalHTML(node.ai)}
+        ${node.tip ? `<aside class="tipcard" ${state.tipsOn ? "" : "hidden"}><span class="eyebrow">Negotiation tip</span><p>${esc(node.tip)}</p></aside>` : ""}
+        <span class="eyebrow">Your response</span>
+        <div class="choices">
+          ${choices.map((c, n) => `<button class="choice" data-idx="${c.index}"><kbd>${n + 1}</kbd><span>${esc(c.text)}</span></button>`).join("")}
+        </div>
+      </section>`);
+    wireCaseBar();
+    animateMeters();
+    typeInto(node.ai);
+    let chosen = false;
+    app.querySelectorAll(".choice").forEach((b) => b.addEventListener("click", () => {
+      if (chosen) return;
+      chosen = true;
+      state.result = state.session.choose(+b.dataset.idx);
+      showResult();
+    }));
+  }
+
+  // ---------- Coaching after a choice ----------
+  function showResult() {
+    state.screen = "result";
+    const r = state.result;
+    const sign = (n) => (n > 0 ? "+" + n : String(n));
+    render(`
+      ${caseBar()}
+      <section class="screen">
+        ${metersHTML()}
+        ${zopaHTML()}
+        ${terminalHTML(r.reply)}
+        <div class="coach ${r.good ? "good" : "bad"}">
+          <span class="verdict">${r.good ? "GOOD MOVE" : "MISSTEP"} &middot; ${esc(r.skill.toUpperCase())}</span>
+          <span class="deltas">Trust ${sign(r.trustDelta)} &nbsp;|&nbsp; Rewrite Risk ${sign(r.tensionDelta)}</span>
+          <p><b>Coach:</b> ${esc(r.coach)}</p>
+        </div>
+        <div class="row"><button class="btn btn-primary" data-act="next">${r.finished ? "See debrief" : "Continue"}</button></div>
+      </section>`);
+    wireCaseBar();
+    animateMeters();
+    typeInto(r.reply);
+    app.querySelector('[data-act="next"]').addEventListener("click", () => (r.finished ? showDebrief() : showNode()));
+  }
+
+  // ---------- Debrief ----------
+  function showDebrief() {
+    typingToken++;
+    state.screen = "debrief";
+    const sc = state.sc, s = state.session, e = s.ending;
+    const win = e.kind !== "rewrite" && e.valueScore > 0;
+    const prevBest = +(store("ch-best-" + sc.id) || 0);
+    if (e.score > prevBest) store("ch-best-" + sc.id, String(e.score));
+    const other = DATA.list[state.scIndex === 0 ? 1 : 0];
+    const ratings = e.ratings.map((r) => `
+      <div class="rating">
+        <span class="nm">${esc(r.skill)}</span>
+        <span class="pips" role="img" aria-label="${r.rating} out of 5">${[1, 2, 3, 4, 5].map((k) => `<i class="${k <= r.rating ? "on r" + r.rating : ""}"></i>`).join("")}</span>
+        <span class="vd r${r.rating}">${r.rating}/5 &middot; ${esc(r.verdict)}</span>
+        <span class="gl">${esc(DATA.glossary[r.skill] || "")}</span>
+      </div>`).join("");
+    render(`
+      ${caseBar()}
+      <section class="screen">
+        <div class="outcome">
+          <span class="badge ${win ? "win" : "lose"}">${esc(e.title)}</span>
+          <div class="score"><span class="num">${e.score}<span class="muted" style="font-size:1rem"> / 100</span></span><span class="rank">${esc(e.rank)}</span>${e.score > prevBest && prevBest > 0 ? `<span class="chip" style="border-color:var(--good);color:var(--good)">New personal best</span>` : ""}</div>
+          <p>${esc(e.summary)}</p>
+          <div class="stats"><span>Value captured ${Math.round(e.valueScore * 100)}%</span><span>Final trust ${e.trust}</span><span>Good moves ${e.goodMoves} of ${e.totalMoves}</span></div>
+        </div>
+        <div class="panel" style="border-color:color-mix(in srgb, var(--brass) 55%, var(--line))">
+          <span class="eyebrow" style="color:var(--brass)">Your negotiation skills, rated 1 to 5</span>
+          <p style="font-weight:600">${esc(e.ratingSummary)}</p>
+          <div class="ratings">${ratings}</div>
+        </div>
+        <div class="panel">
+          <span class="eyebrow">What was hidden</span>
+          <p class="small">${esc(sc.aiName)}'s floor: ${esc(fmt(s.themWalkaway))}</p>
+          <p class="small">${esc(sc.aiName)}'s BATNA: ${esc(sc.batna.them)}</p>
+        </div>
+        <div class="row">
+          <button class="btn btn-primary" data-act="again">Play again</button>
+          ${other ? `<button class="btn btn-ghost" data-act="other" style="border-color:${rgb(other.color)}">Try ${esc(other.aiName)}</button>` : ""}
+          <button class="btn btn-ghost" data-act="lobby3">Back to chambers</button>
+        </div>
+      </section>`);
+    wireCaseBar();
+    app.querySelector('[data-act="again"]').addEventListener("click", () => showBriefing(state.scIndex));
+    const o = app.querySelector('[data-act="other"]');
+    if (o) o.addEventListener("click", () => showBriefing(DATA.list.indexOf(other)));
+    app.querySelector('[data-act="lobby3"]').addEventListener("click", showLobby);
+  }
+
+  // ---------- Keyboard: 1-4 to answer, Enter to continue ----------
+  document.addEventListener("keydown", (ev) => {
+    if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
+    if (state.screen === "node" && /^[1-4]$/.test(ev.key)) {
+      const b = app.querySelectorAll(".choice")[+ev.key - 1];
+      if (b) { ev.preventDefault(); b.click(); }
+    } else if (state.screen === "result" && ev.key === "Enter" && document.activeElement === document.body) {
+      const b = app.querySelector('[data-act="next"]');
+      if (b) { ev.preventDefault(); b.click(); }
+    }
+  });
+
+  // ---------- Keep a game in progress across page updates ----------
+  function snapshot() {
+    return { screen: state.screen, scIndex: state.scIndex, history: state.session ? state.session.history.slice() : [], tipsOn: state.tipsOn };
+  }
+  function restore(d) {
+    try {
+      if (!d || !d.screen || d.screen === "lobby" || d.scIndex < 0 || !DATA.list[d.scIndex]) return false;
+      state.tipsOn = !!d.tipsOn;
+      if (d.screen === "briefing") { showBriefing(d.scIndex); return true; }
+      showBriefing(d.scIndex);
+      if (d.screen === "learn") { showLearn(); return true; }
+      state.session = new Session(state.sc);
+      const h = d.history || [];
+      if (d.screen === "node") { h.forEach((i) => state.session.choose(i)); state.prevTrust = state.session.trust; state.prevTension = state.session.tension; showNode(); return true; }
+      if (!h.length) { showNode(); return true; }
+      h.slice(0, -1).forEach((i) => state.session.choose(i));
+      state.prevTrust = state.session.trust; state.prevTension = state.session.tension;
+      state.result = state.session.choose(h[h.length - 1]);
+      if (d.screen === "result") showResult(); else showDebrief();
+      return true;
+    } catch (err) { return false; }
+  }
+
+  function start(data) {
+    state.tipsOn = store("ch-tips") === "1";
+    if (!restore(data)) showLobby();
+  }
+  try { window.claude?.hot?.snapshot?.(snapshot); } catch (e) {}
+  if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {});
+
+  // Test hook (harmless for players)
+  window.__contractHostage = { state };
+})();
+</script>
+</body></html>
